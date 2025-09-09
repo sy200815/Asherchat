@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>♡他·与他的次元</title>
+    <title>♡他</title>
     <!-- Custom Font and Bubble Styles will be injected here by JS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3271,12 +3271,18 @@
 
     // --- App Initialization ---
     const initializeApp = async () => {
+      console.log("1. --- 应用开始初始化 (App Initialization Started) ---"); 
+      try {
         await idb.init('MyAiChateauDB', 1);
+        console.log("2. IndexedDB数据库初始化成功 (IndexedDB Initialized)");
         await loadState();
+        console.log("3. 从localStorage加载状态成功 (State Loaded from localStorage). 当前状态:", JSON.parse(JSON.stringify(state)));
         await hydrateStateFromDB();
+        console.log("4. 从IndexedDB恢复数据到状态中成功 (State Hydrated from DB)");
 
         state.currentChatId = parseInt(localStorage.getItem('lastActiveChatId')) || null;
         state.currentChatType = localStorage.getItem('lastActiveChatType') || 'character';
+        console.log("5. 读取到上次打开的聊天ID (Last Chat ID Read):", state.currentChatId);
         
         // Populate settings UI
         document.getElementById('api-url-input').value = state.settings.apiUrl || '';
@@ -3306,19 +3312,29 @@
 
         // Initial render
         if (state.userPersonas.length === 0) {
+          console.log("6a. 检测到用户人设为空，正在创建默认人设 (No user persona, creating default one)");
             const defaultPersona = { id: Date.now(), name: '默认的我', signature: '点击管理人设来编辑我', prompt: '我是一个普通用户', avatar: 'https://via.placeholder.com/140', headerBg: null };
             state.userPersonas.push(defaultPersona);
             state.activeUserPersonaId = defaultPersona.id;
             saveState();
-        }
+        } else { 
+          console.log("6b. 已存在用户人设 (User personas exist)"); }
 
+        console.log("7. 准备渲染聊天列表 (Preparing to render chat list). 角色数量:", state.characters.length);
         renderChatList();
+        console.log("8. 聊天列表渲染函数调用完成 (renderChatList function call finished)");
         initEventListeners();
+        console.log("9. 所有事件监听器初始化完成 (Event Listeners Initialized)");
         startGameLoop();
+        console.log("10. 游戏主循环已启动 (Game Loop Started)");
         if (state.settings.proactiveMessages.enabled) {
             startProactiveMessageCheck();
         }
     };
+      console.log("11. --- 应用初始化流程全部成功结束 (App Initialization Finished Successfully) ---"); 
+    } catch (error) { 
+      // 如果中间任何一步的 await 失败了，就会被这里捕获// 
+      console.error("!!! 在初始化过程中发生严重错误 (FATAL ERROR during initialization) !!!", error); } };
 
     initializeApp();
 });
