@@ -2333,13 +2333,13 @@
         4.  **【去人机感】**: **绝对禁止** 说出“作为一个AI模型”、“我的程序”、“我的设定”等词语。你就是一个活生生的人。使用口语化的、自然的语言，可以带有一些语气词和表情符号(emoji)。
 
         # 功能性JSON对象指南 (你可以选择在回复中加入这些对象)
-        - **回复语音**: `{"type":"voice","text":"这里是语音转的文字内容","duration":5}` (duration是2-10秒的随机整数)
-        - **主动转账**: `{"type":"transfer","amount":52.0,"text":"给你买奶茶"}` (金额和文本要符合人设和情境，比如在我说不开心时，你可以发这个)
-        - **接收转账**: 当我给你转账时，消息会包含一个ID。如果你决定接收，你必须在文字回复后，附带 `{"type":"transfer_receipt","id":"收到的转账ID"}`。
-        - **发起视频通话**: `{"type":"video_call_incoming"}`
-        - **发情侣问卷**: `{"type":"questionnaire", "title": "默契大考验", "questions": ["我们第一次聊天是什么时候？", "我最喜欢吃什么？"], "id": "qn_${Date.now()}"}`
-        - **撤回消息**: 如果你觉得某句话不妥，可以在发出后，立刻再发一个 `{"type":"retract", "target_id":"要撤回的消息ID"}`。注意，这需要前端支持，模拟此行为即可。
-        - **发送心声**: 你可以在回复中加入一个 `thought` 字段，内容是你的一句内心想法，例如：`["你在干嘛呀？", {"thought": "他怎么还不回我，好想他..."}]`。
+        - **回复语音**: {"type":"voice","text":"这里是语音转的文字内容","duration":5} (duration是2-10秒的随机整数)
+        - **主动转账**: {"type":"transfer","amount":52.0,"text":"给你买奶茶"} (金额和文本要符合人设和情境，比如在我说不开心时，你可以发这个)
+        - **接收转账**: 当我给你转账时，消息会包含一个ID。如果你决定接收，你必须在文字回复后，附带 {"type":"transfer_receipt","id":"收到的转账ID"}。
+        - **发起视频通话**: {"type":"video_call_incoming"}
+        - **发情侣问卷**: {"type":"questionnaire", "title": "默契大考验", "questions": ["我们第一次聊天是什么时候？", "我最喜欢吃什么？"], "id": "qn_${Date.now()}"}
+        - **撤回消息**: 如果你觉得某句话不妥，可以在发出后，立刻再发一个 {"type":"retract", "target_id":"要撤回的消息ID"}。注意，这需要前端支持，模拟此行为即可。
+        - **发送心声**: 你可以在回复中加入一个 thought 字段，内容是你的一句内心想法，例如：["你在干嘛呀？", {"thought": "他怎么还不回我，好想他..."} 。
         - **请积极主动地使用以上功能来丰富你们的互动，让聊天更有趣！**
 
         # 场景互动指南
@@ -3267,74 +3267,81 @@
             alert("重置应用时发生错误。");
         }
     };
+  
+    const updateApiPresetDropdown = () => {
+        const presetSelect = document.getElementById('api-preset-select');
+        if (!presetSelect) return; // 如果找不到元素，就直接退出
 
+        const currentVal = presetSelect.value;
+        presetSelect.innerHTML = '<option value="">选择一个预设...</option>'; // 清空并添加默认选项
 
-    // --- App Initialization ---
+        if (state.settings.apiPresets && state.settings.apiPresets.length > 0) {
+            state.settings.apiPresets.forEach(preset => {
+                const option = document.createElement('option');
+                option.value = preset.name;
+                option.textContent = preset.name;
+                presetSelect.appendChild(option);
+            });
+        }
+        presetSelect.value = currentVal; // 尝试恢复之前的选项
+    };
+
+        // --- App Initialization ---
     const initializeApp = async () => {
-      console.log("1. --- 应用开始初始化 (App Initialization Started) ---"); 
-      try {
-        await idb.init('MyAiChateauDB', 1);
-        console.log("2. IndexedDB数据库初始化成功 (IndexedDB Initialized)");
-        await loadState();
-        console.log("3. 从localStorage加载状态成功 (State Loaded from localStorage). 当前状态:", JSON.parse(JSON.stringify(state)));
-        await hydrateStateFromDB();
-        console.log("4. 从IndexedDB恢复数据到状态中成功 (State Hydrated from DB)");
+        try {
+            // 数据库和状态加载
+            await idb.init('MyAiChateauDB', 1);
+            await loadState();
+            await hydrateStateFromDB();
 
-        state.currentChatId = parseInt(localStorage.getItem('lastActiveChatId')) || null;
-        state.currentChatType = localStorage.getItem('lastActiveChatType') || 'character';
-        console.log("5. 读取到上次打开的聊天ID (Last Chat ID Read):", state.currentChatId);
-        
-        // Populate settings UI
-        document.getElementById('api-url-input').value = state.settings.apiUrl || '';
-        document.getElementById('api-key-input').value = state.settings.apiKey || '';
-        document.getElementById('font-url-input').value = state.settings.fontUrl || '';
-        document.getElementById('font-size-slider').value = state.settings.fontSize || 16;
-        document.getElementById('theme-color-picker').value = state.settings.themeColor || '#ffb6c1';
-        if(state.settings.backgrounds.chatList) {
-            document.getElementById('chat-list-bg-opacity-slider').value = state.settings.backgrounds.chatList.opacity;
-            document.getElementById('chat-list-bg-opacity-value').textContent = `${Math.round(state.settings.backgrounds.chatList.opacity * 100)}%`;
-        }
-        if (state.settings.backgrounds.moments) {
-            document.getElementById('moments-bg-opacity-slider').value = state.settings.backgrounds.moments.opacity;
-            document.getElementById('moments-bg-opacity-value').textContent = `${Math.round(state.settings.backgrounds.moments.opacity * 100)}%`;
-        }
-        document.getElementById('proactive-toggle').checked = state.settings.proactiveMessages.enabled;
-        document.getElementById('proactive-interval-input').value = state.settings.proactiveMessages.interval;
-        document.getElementById('pat-text-input').value = state.settings.patText || '';
-        
-        // Apply settings
-        applyTheme(state.settings.themeColor);
-        applyFont(state.settings.fontUrl);
-        applyFontSize(state.settings.fontSize || 16);
-        applyBackgrounds();
-        applyIcons();
-        updateApiPresetDropdown();
+            state.currentChatId = parseInt(localStorage.getItem('lastActiveChatId')) || null;
+            state.currentChatType = localStorage.getItem('lastActiveChatType') || 'character';
+            
+            // 填充UI设置（这部分代码可以放在这里）
+            document.getElementById('api-url-input').value = state.settings.apiUrl || '';
+            document.getElementById('api-key-input').value = state.settings.apiKey || '';
+            document.getElementById('font-url-input').value = state.settings.fontUrl || '';
+            document.getElementById('font-size-slider').value = state.settings.fontSize || 16;
+            document.getElementById('theme-color-picker').value = state.settings.themeColor || '#ffb6c1';
+            if(state.settings.backgrounds.chatList) {
+                document.getElementById('chat-list-bg-opacity-slider').value = state.settings.backgrounds.chatList.opacity;
+                document.getElementById('chat-list-bg-opacity-value').textContent = `${Math.round(state.settings.backgrounds.chatList.opacity * 100)}%`;
+            }
+            if (state.settings.backgrounds.moments) {
+                document.getElementById('moments-bg-opacity-slider').value = state.settings.backgrounds.moments.opacity;
+                document.getElementById('moments-bg-opacity-value').textContent = `${Math.round(state.settings.backgrounds.moments.opacity * 100)}%`;
+            }
+            document.getElementById('proactive-toggle').checked = state.settings.proactiveMessages.enabled;
+            document.getElementById('proactive-interval-input').value = state.settings.proactiveMessages.interval;
+            document.getElementById('pat-text-input').value = state.settings.patText || '';
+            
+            // 应用主题和设置
+            applyTheme(state.settings.themeColor);
+            applyFont(state.settings.fontUrl);
+            applyFontSize(state.settings.fontSize || 16);
+            applyBackgrounds();
+            applyIcons();
+            updateApiPresetDropdown();
 
-        // Initial render
-        if (state.userPersonas.length === 0) {
-          console.log("6a. 检测到用户人设为空，正在创建默认人设 (No user persona, creating default one)");
-            const defaultPersona = { id: Date.now(), name: '默认的我', signature: '点击管理人设来编辑我', prompt: '我是一个普通用户', avatar: 'https://via.placeholder.com/140', headerBg: null };
-            state.userPersonas.push(defaultPersona);
-            state.activeUserPersonaId = defaultPersona.id;
-            saveState();
-        } else { 
-          console.log("6b. 已存在用户人设 (User personas exist)"); }
+            // 初始渲染逻辑
+            if (state.userPersonas.length === 0) {
+                const defaultPersona = { id: Date.now(), name: '默认的我', signature: '点击管理人设来编辑我', prompt: '我是一个普通用户', avatar: 'https://via.placeholder.com/140', headerBg: null };
+                state.userPersonas.push(defaultPersona);
+                state.activeUserPersonaId = defaultPersona.id;
+                saveState();
+            }
 
-        console.log("7. 准备渲染聊天列表 (Preparing to render chat list). 角色数量:", state.characters.length);
-        renderChatList();
-        console.log("8. 聊天列表渲染函数调用完成 (renderChatList function call finished)");
-        initEventListeners();
-        console.log("9. 所有事件监听器初始化完成 (Event Listeners Initialized)");
-        startGameLoop();
-        console.log("10. 游戏主循环已启动 (Game Loop Started)");
-        if (state.settings.proactiveMessages.enabled) {
-            startProactiveMessageCheck();
+            renderChatList();
+            initEventListeners();
+            startGameLoop();
+            if (state.settings.proactiveMessages.enabled) {
+                startProactiveMessageCheck();
+            }
+            
+        } catch (error) {
+            console.error("!!! 在初始化过程中发生严重错误 (FATAL ERROR during initialization) !!!", error);
         }
     };
-      console.log("11. --- 应用初始化流程全部成功结束 (App Initialization Finished Successfully) ---"); 
-    } catch (error) { 
-      // 如果中间任何一步的 await 失败了，就会被这里捕获// 
-      console.error("!!! 在初始化过程中发生严重错误 (FATAL ERROR during initialization) !!!", error); } };
 
     initializeApp();
 });
